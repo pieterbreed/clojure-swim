@@ -10,6 +10,11 @@
   [cluster]
   cluster)
 
+(defn get-id
+  "Returns the id of the cluster member passed in"
+  [member]
+  member)
+
 (defn foo
   "I don't do a whole lot."
   [x]

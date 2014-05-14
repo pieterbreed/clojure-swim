@@ -8,4 +8,5 @@
       (testing "WHEN I create a new swim network"
         (let [swim (create-cluster id)]
           (testing "THEN initially it contains only myself in the members list"
-            (is [= 1 (count (get-members swim))])))))))
+            (is [= 1 (count (get-members swim))])
+            (is [= id (-> swim get-members first get-id)])))))))
