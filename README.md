@@ -1,10 +1,11 @@
 # swim
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library in which I'm playing with the [SWIM protocol](http://www.cs.cornell.edu/~asdas/research/dsn02-swim.pdf).
+
 
 ## Usage
 
-FIXME
+NONE
 
 ## License
 
