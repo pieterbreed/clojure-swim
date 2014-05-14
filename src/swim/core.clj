@@ -1,19 +1,29 @@
-(ns swim.core)
+(ns swim.core
+  (:require [clojure.core.async :as async]))
 
-(defn create-cluster
-  "Creates a handle to a new swim cluster using id which must be unique to the cluster"
-  [id]
-  (list id))
+(defn join-cluster
+  "Creates a handle to a swim cluster using local id which must be unique to the cluster"
+  ([my-address]
+     {:me my-address
+      :others []})
+  ([my-address other-addresses]
+     {:me my-address
+      :others other-addresses}))
 
 (defn get-members
   "Gets a list of all of the members in the cluster"
   [cluster]
-  cluster)
+  (:others cluster))
 
-(defn get-id
+(defn get-my-address
   "Returns the id of the cluster member passed in"
-  [member]
-  member)
+  [cluster]
+  (:me cluster))
+
+(defn send-message
+  "Sends a message to an address"
+  [address msg]
+  nil)
 
 (defn foo
   "I don't do a whole lot."
