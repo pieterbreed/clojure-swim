@@ -32,8 +32,13 @@
         i (-> (get cluster :last-ping-target -1)
               inc
               (mod (count members)))
+        members (if (= 0 i)
+                  (shuffle members)
+                  members)
         target (get members i)
-        cluster (assoc cluster :last-ping-target i)]
+        cluster (assoc cluster
+                  :last-ping-target i
+                  :others members)]
     (vector cluster target)))
 
 (defn ping-member

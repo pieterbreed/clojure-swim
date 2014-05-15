@@ -46,8 +46,10 @@
                           (let [[cluster target] (find-ping-target cluster)]
                             (recur cluster
                                    (conj targets target)
-                                   (dec i)))))
-              freqs (frequencies targets)]
-          (is (every? #(= 2 %) (vals freqs))))))))
+                                   (dec i)))))]
+          (testing "THEN the sequence in which targets are chosen are random"
+            (is (apply not= (partition (count members) targets))))
+          (testing "THEN every target should be picked exactly twice"
+            (is (every? #(= 2 %) (vals (frequencies targets))))))))))
 
 
