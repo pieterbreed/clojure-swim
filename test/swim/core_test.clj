@@ -23,3 +23,31 @@
           (testing "THEN I should be able to send a message to the other member"
             (send-message (-> swim get-members first) "message")
             ))))))
+
+(deftest find-ping-target-tests
+  (testing "GIVEN a cluster with n members"
+    (let [members [:a :b :c :d]
+          cluster (join-cluster :me members)]
+      (testing "WHEN I need to find a member to ping"
+        (let [target (find-ping-target cluster)]
+          (testing "THEN I should get the cluster and the target back"
+            (let [[cluster target] target]
+              (is (map? cluster))
+              (is (= members (get-members cluster)))))
+          (testing "THEN the target should not be nil"
+            (let [[cluster target] (find-ping-target cluster)]
+              (is (not (nil? target)))))))
+      (testing "WHEN I pick 2 * n targets to ping"
+        (let [targets (loop [cluster cluster
+                             targets '()
+                             i (* 2 (count members))]
+                        (if (= 0 i)
+                          targets
+                          (let [[cluster target] (find-ping-target cluster)]
+                            (recur cluster
+                                   (conj targets target)
+                                   (dec i)))))
+              freqs (frequencies targets)]
+          (is (every? #(= 2 %) (vals freqs))))))))
+
+
