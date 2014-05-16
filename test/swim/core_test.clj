@@ -96,8 +96,8 @@
                                                {:type :timeout
                                                 :target target})]
                   (testing "THEN the other member should be sent a ping-req message"
-                    (= {:type :ping-req
-                        :target target}
-                       (-> sink
-                           (get other)
-                           first))))))))))))
+                    (is (= {:type :ping-req
+                            :target target}
+                           (-> sink
+                               (get other)
+                               first)))))))))))))

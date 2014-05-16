@@ -70,10 +70,10 @@
               (assoc c :pinged (conj pinged target)))))
         (send-message target {:type :ping}))))
 
-(defn receive-message
-  "Receives a message of a general type"
-  [cluster msg]
-  cluster)
+(defmulti receive-message (fn [cluster msg]
+                            (:type msg)))
+(defmethod receive-message :timeout [cluster msg]
+  (println "hierso!"))
 
 (defn foo
   "I don't do a whole lot."
