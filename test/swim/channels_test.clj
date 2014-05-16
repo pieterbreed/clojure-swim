@@ -8,9 +8,8 @@
   (let [sink (atom {})
         channels (atom [])
         stop-fn (fn []
-                  (println (str "closing " (count @channels) " channels ..."))
                   (for [ch @channels]
-                    (do (println (str "closing " ch))
+                    (do 
                         (async/close! ch)))
                   (swap! channels (constantly [])))
         create-channel-fn (fn [id]
