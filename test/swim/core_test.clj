@@ -1,6 +1,7 @@
 (ns swim.core-test
   (:require [clojure.test :refer :all]
-            [swim.core :refer :all]))
+            [swim.core :refer :all]
+            [swim.channels-test :refer :all]))
 
 (deftest basic-api-tests
   (testing "GIVEN an address which represents myself"
@@ -33,7 +34,7 @@
           (testing "THEN I should get the cluster and the target back"
             (let [[cluster target] target]
               (is (map? cluster))
-              (is (= members (get-members cluster)))))
+              (is (every? #(some #{%} members) (get-members cluster)))))
           (testing "THEN the target should not be nil"
             (let [[cluster target] (find-ping-target cluster)]
               (is (not (nil? target)))))))
