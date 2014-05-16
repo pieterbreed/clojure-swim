@@ -76,3 +76,28 @@
                       msgs (get @sink target)]
                   (is (= 1 (count msgs)))
                   (is (= {:type :ping} (first msgs))))))))))))
+
+(deftest ack-timeout-message-tests
+  (testing "GIVEN a cluster with 2 members"
+    (with-fake-message-sink
+      (fn [create-fn sink]
+        (let [others [:a :b]
+              me :me
+              cluster (join-cluster me others create-fn)]
+          (testing "WHEN I send a ping message to one of the members"
+            (let [cluster (ping-member cluster)
+                  target (first (:pinged cluster))
+                  other (->> cluster
+                             get-members
+                             (filter #(= % target))
+                             first)]
+              (testing "AND a timeout message is received"
+                (let [cluster (receive-message cluster
+                                               {:type :timeout
+                                                :target target})]
+                  (testing "THEN the other member should be sent a ping-req message"
+                    (= {:type :ping-req
+                        :target target}
+                       (-> sink
+                           (get other)
+                           first))))))))))))

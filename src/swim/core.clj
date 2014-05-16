@@ -49,7 +49,10 @@
               inc
               (mod (count members)))
         members (if (= 0 i)
-                  (shuffle members)
+                  (loop [mbrs members]
+                    (if (not= members mbrs)
+                      mbrs
+                      (recur (shuffle mbrs))))
                   members)
         target (get members i)
         cluster (assoc cluster
@@ -58,7 +61,7 @@
     (vector cluster target)))
 
 (defn ping-member
-  "Chooses a member from the cluster and sends a ping message via the channel ch"
+  "Chooses a member from the cluster and sends a ping message"
   [cluster]
   (let [[cluster target] (find-ping-target cluster)]
     (-> cluster
@@ -66,6 +69,11 @@
             (let [pinged (get (:pinged c) [])]
               (assoc c :pinged (conj pinged target)))))
         (send-message target {:type :ping}))))
+
+(defn receive-message
+  "Receives a message of a general type"
+  [cluster msg]
+  cluster)
 
 (defn foo
   "I don't do a whole lot."
