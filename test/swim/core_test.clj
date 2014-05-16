@@ -62,6 +62,18 @@
           (testing "THEN every target should be picked exactly twice"
             (is (every? #(= 2 %) (vals (frequencies targets))))))))))
 
+(deftest pick-k-ping-targets-tests
+  (testing "GIVEN a cluster with many members"
+    (let [members [:a :b :c :d :e :f]
+          cluster (join-cluster :me members)]
+      (testing "WHEN I'm picking multiple targets"
+        (testing "THEN I should only be able to pick (n - 1) targets at maximum"
+          (let [[cluster targets] (find-k-ping-targets
+                                   cluster
+                                   (* 2  (count members)))]
+            (is (= (- (count members) 1)
+                   (count targets)))))))))
+
 (deftest basic-timestep-tests
   (testing "GIVEN a cluster with 2 members"
     (with-fake-message-sink

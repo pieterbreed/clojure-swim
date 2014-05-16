@@ -60,6 +60,19 @@
                   :others members)]
     (vector cluster target)))
 
+(defn find-k-ping-targets
+  "Choose at most (min k (n - 1)) targes from the pool of members"
+  [cluster k]
+  (let [n (min k (- (count (get-members cluster)) 1))]
+    (loop [n n
+           cluster cluster
+           targets []]
+      (if (= 0 n) [cluster targets]
+          (let [[cluster target] (find-ping-target cluster)]
+            (recur (dec n)
+                   cluster
+                   (conj targets target)))))))
+
 (defn ping-member
   "Chooses a member from the cluster and sends a ping message"
   [cluster]
@@ -72,8 +85,19 @@
 
 (defmulti receive-message (fn [cluster msg]
                             (:type msg)))
-(defmethod receive-message :timeout [cluster msg]
-  (println "hierso!"))
+(defmethod receive-message
+  :timeout
+  [cluster {:keys [target]}]
+  (let [pinged (:pinged cluster)]
+    (if (some #{target} pinged)
+      (let [pinged (filter #{target} pinged)]
+        )
+      
+      
+      )
+    )
+
+  cluster)
 
 (defn foo
   "I don't do a whole lot."
