@@ -1,6 +1,14 @@
 (ns swim.core
   (:require [clojure.core.async :as async]))
 
+(defn round
+  "Naive implementation of rounding for floating point numbers. Returns an int"
+  [fp]
+  (let [sign (if (< 0 fp) 1 -1)]
+    (-> fp
+        (+ (* sign  0.5))
+        int)))
+
 (defn create-channel
   "Creates a channel based on an address"
   [address]
@@ -14,16 +22,24 @@
                    (apply merge {}))))
 
 (defn join-cluster
-  "Creates a handle to a swim cluster using local id which must be unique to the cluster"
-  ([my-address other-addresses create-channel-fn]
-     (-init-cluster 
-      {:me my-address
-       :others other-addresses
-       :create-channel-fn create-channel-fn}))
+  "Creates a handle to a swim cluster using local id which must be unique to the cluster:
+options:
+{
+:create-channel-fn function that will create a channel given an id
+:k-factor value between 0 and 1 that will determine how many elements are chosen to send a ping-req to if a ping times out (default 0.67)
+}
+"
+  ([my-address other-addresses options]
+     (-init-cluster
+      (merge {:create-channel-fn create-channel
+              :k-factor 0.67}
+             options 
+            {:me my-address
+             :others other-addresses})))
   ([my-address others]
-     (join-cluster my-address others create-channel))
+     (join-cluster my-address others {}))
   ([my-address]
-     (join-cluster my-address [] create-channel)))
+     (join-cluster my-address [] {})))
 
 (defn get-members
   "Gets a list of all of the members in the cluster"
@@ -60,16 +76,28 @@
                   :others members)]
     (vector cluster target)))
 
+(defn find-k-number
+  [members k-factor]
+  (let [nr (count members)]
+    (-> k-factor
+        (* nr)
+        round
+        (max 1)
+        (min nr))))
+
 (defn find-k-ping-targets
   "Choose at most (min k (n - 1)) targes from the pool of members"
-  [cluster k]
-  (let [n (min k (- (count (get-members cluster)) 1))]
-    (loop [cluster cluster
-           targets #{}]
-      (if (= n (count targets)) [cluster (vec targets)]
-          (let [[cluster target] (find-ping-target cluster)]
-            (recur cluster
-                   (conj targets target)))))))
+  ([cluster k]
+     (let [n (min k (- (count (get-members cluster)) 1))]
+       (loop [cluster cluster
+              targets #{}]
+         (if (= n (count targets)) [cluster (vec targets)]
+             (let [[cluster target] (find-ping-target cluster)]
+               (recur cluster
+                      (conj targets target)))))))
+  ([cluster]
+     (find-k-ping-targets cluster (find-k-number (get-members cluster)
+                                                 (:k-factor cluster)))))
 
 (defn ping-member
   "Chooses a member from the cluster and sends a ping message"
