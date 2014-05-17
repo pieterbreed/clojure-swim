@@ -65,14 +65,23 @@
 (deftest pick-k-ping-targets-tests
   (testing "GIVEN a cluster with many members"
     (let [members [:a :b :c :d :e :f]
-          cluster (join-cluster :me members)]
+          cluster (join-cluster :me members)
+          cluster (loop [cl cluster
+                         i 4]
+                    (if (= i 0) cl
+                        (recur (get (find-ping-target cl) 0)
+                               (dec i))))]
       (testing "WHEN I'm picking multiple targets"
-        (testing "THEN I should only be able to pick (n - 1) targets at maximum"
-          (let [[cluster targets] (find-k-ping-targets
-                                   cluster
-                                   (* 2  (count members)))]
+        
+        (let [[cluster targets] (find-k-ping-targets
+                                 cluster
+                                 (* 2  (count members)))]
+          (testing "THEN I should only be able to pick (n - 1) targets at maximum"
             (is (= (- (count members) 1)
-                   (count targets)))))))))
+                   (count targets))))
+          (testing "THEN there should be no repititions"
+            (is (= (count targets)
+                   (count (set targets))))))))))
 
 (deftest basic-timestep-tests
   (testing "GIVEN a cluster with 2 members"

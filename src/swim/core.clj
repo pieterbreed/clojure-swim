@@ -64,13 +64,11 @@
   "Choose at most (min k (n - 1)) targes from the pool of members"
   [cluster k]
   (let [n (min k (- (count (get-members cluster)) 1))]
-    (loop [n n
-           cluster cluster
-           targets []]
-      (if (= 0 n) [cluster targets]
+    (loop [cluster cluster
+           targets #{}]
+      (if (= n (count targets)) [cluster (vec targets)]
           (let [[cluster target] (find-ping-target cluster)]
-            (recur (dec n)
-                   cluster
+            (recur cluster
                    (conj targets target)))))))
 
 (defn ping-member
