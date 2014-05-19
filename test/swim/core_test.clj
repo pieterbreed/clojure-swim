@@ -150,17 +150,17 @@
                   target (first (:pinged cluster))
                   other (->> cluster
                              get-members
-                             (filter #(= % target))
+                             (filter #(not= % target))
                              first)]
-
+              (println (str "other is " other))
               (testing "AND a timeout message is received"
                 (let [cluster (receive-message cluster
                                                {:type :timeout
                                                 :target target})]
-
+                  (clojure.pprint/pprint @sink)
                   (testing "THEN the other member should be sent a ping-req message"
                     (is (= {:type :ping-req
                             :target target}
-                           (-> sink
+                           (-> @sink
                                (get other)
                                first)))))))))))))

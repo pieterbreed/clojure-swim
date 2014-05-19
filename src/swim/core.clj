@@ -116,14 +116,18 @@ options:
   [cluster {:keys [target]}]
   (let [pinged (:pinged cluster)]
     (if (some #{target} pinged)
-      (let [pinged (filter #{target} pinged)]
-        )
-      
-      
-      )
-    )
-
-  cluster)
+      (let [[cluster targets] (find-k-ping-targets cluster)]
+        (loop [ts targets
+               cl cluster]
+          (if (= 0 (count ts))
+            cl
+            (let [cl (send-message cl
+                            (first ts)
+                            {:type :ping-req
+                             :target target})]
+              (recur (rest ts)
+                     cl)))))
+      cluster)))
 
 (defn foo
   "I don't do a whole lot."
