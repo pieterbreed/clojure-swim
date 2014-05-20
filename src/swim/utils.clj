@@ -8,3 +8,11 @@
         (+ (* sign  0.5))
         int)))
 
+(defn update-in-def
+  "Updates the map m's value at path using a function to modify the value. Similar to update-in, but suplies default value instead of nil if the path corresponds to nil"
+  [m p def f & args]
+  (update-in m p
+             (fn [v]
+               (apply f 
+                      (if (nil? v) def v)
+                      args))))

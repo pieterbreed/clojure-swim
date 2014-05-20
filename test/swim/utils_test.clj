@@ -11,5 +11,18 @@
             (is (= '(-2 -1 -1 0 0 1 1 1)
                    l))))))))
 
+(deftest update-in-with-default-tests
+  (testing "GIVEN a nested data structure"
+    (let [data {:a {:b {:c "value"}}}]
+      (testing "WHEN update-in-def is called with path [:a :b :c] and a function returning \"changed\""
+        (let [data (update-in-def data [:a :b :c] "default" (constantly "changed"))]
+          (testing "THEN (get-in [:a :b :c]  should be \"changed"
+            (is (= "changed" (get-in data [:a :b :c]))))))
+
+      (testing "WHEN update-in-def is called with path [:a :b :d] and an identify function"
+        (let [data (update-in-def data [:a :b :d] "default" identity)]
+          (testing "THEN (get-in [:a :b :d] should be \"default\""
+            (is (= "default" (get-in data [:a :b :d])))))))))
+
 
 

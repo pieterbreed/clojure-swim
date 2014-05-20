@@ -86,10 +86,8 @@ options:
   "Chooses a member from the cluster and sends a ping message"
   [cluster]
   (let [[cluster msgs target] (find-ping-target* cluster)
-        cluster (-> cluster
-                    ((fn [c]
-                       (let [pinged (get (:pinged c) [])]
-                         (assoc c :pinged (conj pinged target))))))]
+        cluster (update-in-def cluster [:pinged] #{}
+                               #(conj % target))]
     (vector cluster
             (concat msgs (list {:to target
                                 :msg {:type :ping}}))
@@ -112,6 +110,13 @@ options:
                                        :msg {:type :ping-req
                                              :target target}}))))))
       [cluster '()])))
+
+(defmethod receive-message*
+  :ack
+  [cluster {:keys [from for-target]}]
+  [(update-in-def cluster [:pinged] #{}
+                  #(disj % for-target))
+   '()])
 
 (defn foo
   "I don't do a whole lot."

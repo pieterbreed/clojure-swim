@@ -138,7 +138,7 @@
         (let [[cluster msgs target] (ping-member* cluster)]
 
           (testing "THEN the :pinged collection should not be empty"
-            (is (not= 0 (count (get cluster :pinged))))
+            (is (= 1 (count (get cluster :pinged))))
             (is (some #{target} members)))
           
 
@@ -147,7 +147,14 @@
               (is (= 1 (count msgs)))
               (is (= {:to target
                       :msg {:type :ping}}
-                     (first msgs))))))))))
+                     (first msgs)))))
+
+          (testing "AND an ack message is received from the pinged member"
+            (let [[cluster & _] (receive-message* cluster {:type :ack
+                                                           :from target
+                                                           :for-target target})]
+              (testing "THEN the state should change to reflect that we are not waiting for an ack anymore"
+                (is (= 0 (count (get cluster :pinged))))))))))))
 
 
 (deftest ack-timeout-message-tests
