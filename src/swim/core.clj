@@ -1,13 +1,6 @@
 (ns swim.core
-  (:require [clojure.core.async :as async]))
-
-(defn round
-  "Naive implementation of rounding for floating point numbers. Returns an int"
-  [fp]
-  (let [sign (if (< 0 fp) 1 -1)]
-    (-> fp
-        (+ (* sign  0.5))
-        int)))
+  (:require [clojure.core.async :as async]
+            [swim.utils :refer :all]))
 
 (defn create-channel
   "Creates a channel based on an address"
