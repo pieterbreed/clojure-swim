@@ -88,38 +88,38 @@
             (is (every? #(= 2 %) (vals (frequencies targets))))))))))
 
 
-;; (deftest pick-k-ping-targets-tests
-;;   (testing "GIVEN a cluster with many known members and default k factor of 0.5"
-;;     (let [members [:a :b :c :d :e :f]
-;;           [cluster & _] (join-cluster* :me members {:k-factor 0.5})]
+(deftest pick-k-ping-targets-tests
+  (testing "GIVEN a cluster with many known members and default k factor of 0.5"
+    (let [members [:a :b :c :d :e :f]
+          [cluster & _] (join-cluster* :me members {:k-factor 0.5})]
 
-;;       (testing "AND I'm choosing the default number of k-ping-targets"
-;;         (let [[cluster _ targets] (find-k-ping-targets* cluster)]
+      (testing "AND I'm choosing the default number of k-ping-targets"
+        (let [[cluster _ targets] (find-k-ping-targets* cluster)]
 
-;;           (testing "THEN I should get half of the number of members back as targets"
-;;             (is (/ (count members) 2)
-;;                 (count targets)))))
+          (testing "THEN I should get half of the number of members back as targets"
+            (is (/ (count members) 2)
+                (count targets)))))
 
-;;       (testing "AND some members have been chosen as ping targets before"
-;;         (let [cluster (loop [cl cluster
-;;                              i (/ (count members) 2)]
-;;                         (if (= i 0) cl
-;;                             (recur (get (find-ping-target* cl) 0)
-;;                                    (dec i))))]
+      (testing "AND some members have been chosen as ping targets before"
+        (let [cluster (loop [cl cluster
+                             i (/ (count members) 2)]
+                        (if (= i 0) cl
+                            (recur (get (find-ping-target* cl) 0)
+                                   (dec i))))]
 
-;;           (testing "WHEN I'm picking multiple targets"
+          (testing "WHEN I'm picking multiple targets"
             
-;;             (let [[cluster _ targets] (find-k-ping-targets*
-;;                                        (count (get-members cluster))
-;;                                        (* 2  (count members)))]
+            (let [[cluster _ targets] (find-k-ping-targets*
+                                       cluster
+                                       (* 2  (count members)))]
 
-;;               (testing "THEN I should only be able to pick (n - 1) targets at maximum"
-;;                 (is (= (- (count members) 1)
-;;                        (count targets))))
+              (testing "THEN I should only be able to pick (n - 1) targets at maximum"
+                (is (= (- (count members) 1)
+                       (count targets))))
 
-;;               (testing "THEN there should be no repititions"
-;;                 (is (= (count targets)
-;;                        (count (set targets))))))))))))
+              (testing "THEN there should be no repititions"
+                (is (= (count targets)
+                       (count (set targets))))))))))))
 
 
 
