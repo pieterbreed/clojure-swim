@@ -123,56 +123,23 @@
 
 
 
-;; (deftest pick-k-ping-targets-tests
-;;   (testing "GIVEN a cluster with many known members and default k factor of 0.5"
-;;     (let [members [:a :b :c :d :e :f]
-;;           cluster (join-cluster :me members {:k-factor 0.5})]
 
-;;       (testing "AND I'm choosing the default number of k-ping-targets"
-;;         (let [[cluster targets] (find-k-ping-targets cluster)]
+(deftest basic-timestep-tests
+  (testing "GIVEN a cluster with 2 members"
+    (let [[cluster msgs] (join-cluster* :me [:a :b :c])] 
 
-;;           (testing "THEN I should get half of the number of members back as targets"
-;;             (is (/ (count members) 2)
-;;                 (count targets)))))
+      (testing "WHEN a ping-member is called"
+        (let [[cluster msgs] (ping-member* cluster)]
 
-;;       (testing "AND some members have been chosen as ping targets before"
-;;         (let [cluster (loop [cl cluster
-;;                              i (/ (count members) 2)]
-;;                         (if (= i 0) cl
-;;                             (recur (get (find-ping-target cl) 0)
-;;                                    (dec i))))]
+          (testing "THEN the :pinged collection should not be empty"
+            (is (not= 0 (count (get cluster :pinged))))) 
 
-;;           (testing "WHEN I'm picking multiple targets"
-            
-;;             (let [[cluster targets] (find-k-ping-targets
-;;                                      cluster
-;;                                      (* 2  (count members)))]
-
-;;               (testing "THEN I should only be able to pick (n - 1) targets at maximum"
-;;                 (is (= (- (count members) 1)
-;;                        (count targets))))
-
-;;               (testing "THEN there should be no repititions"
-;;                 (is (= (count targets)
-;;                        (count (set targets))))))))))))
-
-;; (deftest basic-timestep-tests
-;;   (testing "GIVEN a cluster with 2 members"
-;;     (with-fake-message-sink
-;;       (fn [create-fn sink]
-;;         (let [cluster (join-cluster :me [:a :b :c] {:create-channel-fn create-fn})] 
-
-;;           (testing "WHEN a ping-member is called"
-;;             (let [cluster (ping-member cluster)]
-
-;;               (testing "THEN the :pinged collection should not be empty"
-;;                 (is (not= 0 (count (get cluster :pinged)))))
-
-;;               (testing "THEN the sink should contain a ping message for the pinged item"
-;;                 (let [target (first (:pinged cluster))
-;;                       msgs (get @sink target)]
-;;                   (is (= 1 (count msgs)))
-;;                   (is (= {:type :ping} (first msgs))))))))))))
+          (testing "THEN the output messages should contain a ping message for the pinged item"
+            (let [target (first (:pinged cluster))]
+              (is (= 1 (count msgs)))
+              (is (= {:to target
+                      :msg {:type :ping}}
+                     (first msgs))))))))))
 
 ;; (deftest ack-timeout-message-tests
 ;;   (testing "GIVEN a cluster with 2 members"

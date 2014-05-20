@@ -38,12 +38,6 @@ options:
   [cluster]
   (:me cluster))
 
-(defn send-message
-  "Sends a message to an address"
-  [cluster address msg]
-  (async/>!! (get (:channels cluster) address) msg)
-  cluster)
-
 (defn find-ping-target*
   "Chooses a member to ping, returns the cluster and the target in a vector"
   [cluster]
@@ -88,15 +82,16 @@ options:
      (find-k-ping-targets* cluster (find-k-number (count (get-members cluster))
                                                   (:k-factor cluster)))))
 
-(defn ping-member
+(defn ping-member*
   "Chooses a member from the cluster and sends a ping message"
   [cluster]
-  (let [[cluster target] (find-ping-target* cluster)]
-    (-> cluster
-        ((fn [c]
-            (let [pinged (get (:pinged c) [])]
-              (assoc c :pinged (conj pinged target)))))
-        (send-message target {:type :ping}))))
+  (let [[cluster target] (find-ping-target* cluster)
+        cluster (-> cluster
+                    ((fn [c]
+                       (let [pinged (get (:pinged c) [])]
+                         (assoc c :pinged (conj pinged target))))))]
+    (vector cluster (list {:to target
+                           :msg {:type :ping}}))))
 
 (defmulti receive-message (fn [cluster msg]
                             (:type msg)))
@@ -110,10 +105,11 @@ options:
                cl cluster]
           (if (= 0 (count ts))
             cl
-            (let [cl (send-message cl
-                            (first ts)
-                            {:type :ping-req
-                             :target target})]
+            (let [cl nil ;; (send-message cl         ;;
+                         ;;        (first ts)        ;;
+                         ;;        {:type :ping-req  ;;
+                         ;;         :target target}) ;;
+                  ]
               (recur (rest ts)
                      cl)))))
       cluster)))
