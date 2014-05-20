@@ -4,6 +4,11 @@
             
             [swim.channels-test :refer :all]))
 
+(defn debug [x]
+  (print "DEBUG: ")
+  (clojure.pprint/pprint x)
+  x)
+
 (defn cluster?
   "Tests whether a value represents a valid cluster"
   [v]
@@ -124,15 +129,18 @@
 
 
 
-(deftest basic-timestep-tests
+(deftest ping-tests
   (testing "GIVEN a cluster with 2 members"
-    (let [[cluster msgs] (join-cluster* :me [:a :b :c])] 
+    (let [members [:a :b :c]
+          [cluster msgs] (join-cluster* :me members)]
 
       (testing "WHEN a ping-member is called"
-        (let [[cluster msgs] (ping-member* cluster)]
+        (let [[cluster msgs target] (ping-member* cluster)]
 
           (testing "THEN the :pinged collection should not be empty"
-            (is (not= 0 (count (get cluster :pinged))))) 
+            (is (not= 0 (count (get cluster :pinged))))
+            (is (some #{target} members)))
+          
 
           (testing "THEN the output messages should contain a ping message for the pinged item"
             (let [target (first (:pinged cluster))]
@@ -141,30 +149,25 @@
                       :msg {:type :ping}}
                      (first msgs))))))))))
 
-;; (deftest ack-timeout-message-tests
-;;   (testing "GIVEN a cluster with 2 members"
-;;     (with-fake-message-sink
-;;       (fn [create-fn sink]
-;;         (let [others [:a :b]
-;;               me :me
-;;               cluster (join-cluster me others {:create-channel-fn create-fn})]
 
-;;           (testing "WHEN I send a ping message to one of the members"
-;;             (let [cluster (ping-member cluster)
-;;                   target (first (:pinged cluster))
-;;                   other (->> cluster
-;;                              get-members
-;;                              (filter #(not= % target))
-;;                              first)]
-;;               (println (str "other is " other))
-;;               (testing "AND a timeout message is received"
-;;                 (let [cluster (receive-message cluster
-;;                                                {:type :timeout
-;;                                                 :target target})]
-;;                   (clojure.pprint/pprint @sink)
-;;                   (testing "THEN the other member should be sent a ping-req message"
-;;                     (is (= {:type :ping-req
-;;                             :target target}
-;;                            (-> @sink
-;;                                (get other)
-;;                                first)))))))))))))
+(deftest ack-timeout-message-tests
+  (testing "GIVEN a cluster with 2 members"
+    (let [others [:a :b]
+          me :me
+          [cluster msgs] (join-cluster* me others)]
+      (testing "WHEN I send a ping message to one of the members"
+        (let [[cluster msgs] (ping-member* cluster)
+              target (first (:pinged cluster))
+              other (->> cluster
+                         get-members
+                         (filter #(not= % target))
+                         first)]
+          (testing "AND a timeout message is received"
+            (let [[cluster msgs] (receive-message* cluster
+                                                   {:type :timeout
+                                                    :target target})]
+              (testing "THEN the other member should be sent a ping-req message"
+                (is (= {:to other
+                        :msg {:type :ping-req
+                              :target target}}
+                       (first msgs)))))))))))

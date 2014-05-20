@@ -85,34 +85,33 @@ options:
 (defn ping-member*
   "Chooses a member from the cluster and sends a ping message"
   [cluster]
-  (let [[cluster target] (find-ping-target* cluster)
+  (let [[cluster msgs target] (find-ping-target* cluster)
         cluster (-> cluster
                     ((fn [c]
                        (let [pinged (get (:pinged c) [])]
                          (assoc c :pinged (conj pinged target))))))]
-    (vector cluster (list {:to target
-                           :msg {:type :ping}}))))
+    (vector cluster
+            (concat msgs (list {:to target
+                                :msg {:type :ping}}))
+            target)))
 
-(defmulti receive-message (fn [cluster msg]
-                            (:type msg)))
-(defmethod receive-message
+(defmulti receive-message* (fn [cluster msg]
+                             (:type msg)))
+(defmethod receive-message*
   :timeout
   [cluster {:keys [target]}]
   (let [pinged (:pinged cluster)]
     (if (some #{target} pinged)
-      (let [[cluster targets] (find-k-ping-targets* cluster)]
+      (let [[cluster msgs targets] (find-k-ping-targets* cluster)]
         (loop [ts targets
-               cl cluster]
+               msgs msgs]
           (if (= 0 (count ts))
-            cl
-            (let [cl nil ;; (send-message cl         ;;
-                         ;;        (first ts)        ;;
-                         ;;        {:type :ping-req  ;;
-                         ;;         :target target}) ;;
-                  ]
-              (recur (rest ts)
-                     cl)))))
-      cluster)))
+            [cluster msgs]
+            (recur (rest ts)
+                   (concat msgs (list {:to (first ts)
+                                       :msg {:type :ping-req
+                                             :target target}}))))))
+      [cluster '()])))
 
 (defn foo
   "I don't do a whole lot."
