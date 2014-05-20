@@ -82,16 +82,20 @@ options:
      (find-k-ping-targets* cluster (find-k-number (count (get-members cluster))
                                                   (:k-factor cluster)))))
 
+(defn ping-target*
+  "Pings a specific member"
+  [cluster msgs target]
+  (let [cluster (update-in-def cluster [:pinged] #{}
+                               #(conj % target))
+        msgs (concat msgs (list {:to target
+                                 :msg {:type :ping}}))]
+    (vector cluster msgs target)))
+
 (defn ping-member*
   "Chooses a member from the cluster and sends a ping message"
   [cluster]
-  (let [[cluster msgs target] (find-ping-target* cluster)
-        cluster (update-in-def cluster [:pinged] #{}
-                               #(conj % target))]
-    (vector cluster
-            (concat msgs (list {:to target
-                                :msg {:type :ping}}))
-            target)))
+  (let [[cluster msgs target] (find-ping-target* cluster)]
+    (ping-target* cluster msgs target)))
 
 (defmulti receive-message* (fn [cluster msg]
                              (:type msg)))
@@ -117,6 +121,11 @@ options:
   [(update-in-def cluster [:pinged] #{}
                   #(disj % for-target))
    '()])
+
+(defmethod receive-message*
+  :ping-req
+  [cluster {:keys [from for-target]}]
+  (ping-target* cluster '() for-target))
 
 (defn foo
   "I don't do a whole lot."

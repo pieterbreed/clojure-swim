@@ -163,7 +163,17 @@
                                                                       first)
                                                            :for-target target})]
               (testing "THEN the state should change to reflect that we are not waiting for an ack anymore"
-                (is (= 0 (count (get cluster :pinged))))))))))))
+                (is (= 0 (count (get cluster :pinged)))))))))
+
+
+      (testing "WHEN a ping-req message is received from :a for :b"
+        (let [[cluster msgs] (receive-message* cluster {:type :ping-req
+                                                        :for-target :b
+                                                        :from :a})]
+          (testing "THEN a ping should have been sent to :b"
+            (is (= {:to :b
+                    :msg {:type :ping}}
+                   (first msgs)))))))))
 
 
 (deftest ack-timeout-message-tests
