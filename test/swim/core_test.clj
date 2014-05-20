@@ -154,6 +154,15 @@
                                                            :from target
                                                            :for-target target})]
               (testing "THEN the state should change to reflect that we are not waiting for an ack anymore"
+                (is (= 0 (count (get cluster :pinged)))))))
+
+          (testing "AND an ack message is received from the pinged member"
+            (let [[cluster & _] (receive-message* cluster {:type :ack
+                                                           :from (->> (get-members cluster)
+                                                                      (filter #(not= % target))
+                                                                      first)
+                                                           :for-target target})]
+              (testing "THEN the state should change to reflect that we are not waiting for an ack anymore"
                 (is (= 0 (count (get cluster :pinged))))))))))))
 
 
