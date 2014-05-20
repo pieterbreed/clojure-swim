@@ -77,10 +77,12 @@ options:
   ([cluster k]
      (let [n (min k (- (count (get-members cluster)) 1))]
        (loop [cluster cluster
+              msgs '()
               targets #{}]
-         (if (= n (count targets)) [cluster '() (vec targets)]
-             (let [[cluster target] (find-ping-target* cluster)]
+         (if (= n (count targets)) [cluster msgs (vec targets)]
+             (let [[cluster step-msgs target] (find-ping-target* cluster)]
                (recur cluster
+                      (concat msgs step-msgs)
                       (conj targets target)))))))
   ([cluster]
      (find-k-ping-targets* cluster (find-k-number (count (get-members cluster))
