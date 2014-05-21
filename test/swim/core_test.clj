@@ -173,7 +173,18 @@
           (testing "THEN a ping should have been sent to :b"
             (is (= {:to :b
                     :msg {:type :ping}}
-                   (first msgs)))))))))
+                   (first msgs))))
+
+          (testing "WHEN an ack is received from :b"
+            (let [[cluster msgs] (receive-message* cluster {:type :ack
+                                                            :from :b
+                                                            :for-target :b})]
+              (testing "THEN it should be forwarded back to :a"
+                (is (= {:to :a
+                        :msg {:type :ack
+                              :from (get-my-address cluster)
+                              :for-target :b}}
+                       (first msgs)))))))))))
 
 
 (deftest ack-timeout-message-tests

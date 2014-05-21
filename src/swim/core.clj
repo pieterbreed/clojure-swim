@@ -118,14 +118,17 @@ options:
 (defmethod receive-message*
   :ack
   [cluster {:keys [from for-target]}]
-  [(update-in-def cluster [:pinged] #{}
-                  #(disj % for-target))
-   '()])
+  (let [cluster (update-in-def cluster [:pinged] #{}
+                               disj for-target)]
+    [cluster '()]))
 
 (defmethod receive-message*
   :ping-req
   [cluster {:keys [from for-target]}]
-  (ping-target* cluster '() for-target))
+  (let [cluster (update-in-def cluster [:ping-req] #{}
+                               conj {:from from
+                                     :target for-target})]
+    (ping-target* cluster '() for-target)))
 
 (defn foo
   "I don't do a whole lot."
