@@ -179,6 +179,7 @@
             (let [[cluster msgs] (receive-message* cluster {:type :ack
                                                             :from :b
                                                             :for-target :b})]
+
               (testing "THEN it should be forwarded back to :a"
                 (is (= {:to :a
                         :msg {:type :ack

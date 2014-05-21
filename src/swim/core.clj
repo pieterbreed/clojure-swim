@@ -118,9 +118,23 @@ options:
 (defmethod receive-message*
   :ack
   [cluster {:keys [from for-target]}]
-  (let [cluster (update-in-def cluster [:pinged] #{}
-                               disj for-target)]
-    [cluster '()]))
+  (let [me (get-my-address cluster)]
+    (loop [needs-responses (->> (:ping-req cluster)
+                                (filter #(= (:target %) for-target))
+                                (map :from))
+           cluster (update-in-def cluster [:pinged] #{}
+                                  disj for-target)
+           msgs '()]
+      (if (= 0 (count needs-responses))
+        [cluster msgs]
+        (let [x (first needs-responses)
+              msg {:to x
+                   :msg {:type :ack
+                         :from me
+                         :for-target for-target}}]
+          (recur (rest needs-responses)
+                 (update-in cluster [:ping-req] disj x)
+                 (conj msgs msg))))))) 
 
 (defmethod receive-message*
   :ping-req
