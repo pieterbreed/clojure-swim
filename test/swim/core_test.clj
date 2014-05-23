@@ -130,7 +130,7 @@
 
 
 (deftest ping-tests
-  (testing "GIVEN a cluster with 2 members"
+  (testing "GIVEN a cluster with 3 members"
     (let [members [:a :b :c]
           [cluster msgs] (join-cluster* :me members)]
 
@@ -152,15 +152,6 @@
           (testing "AND an ack message is received from the pinged member"
             (let [[cluster & _] (receive-message* cluster {:type :ack
                                                            :from target
-                                                           :for-target target})]
-              (testing "THEN the state should change to reflect that we are not waiting for an ack anymore"
-                (is (= 0 (count (get cluster :pinged)))))))
-
-          (testing "AND an ack message is received from the pinged member"
-            (let [[cluster & _] (receive-message* cluster {:type :ack
-                                                           :from (->> (get-members cluster)
-                                                                      (filter #(not= % target))
-                                                                      first)
                                                            :for-target target})]
               (testing "THEN the state should change to reflect that we are not waiting for an ack anymore"
                 (is (= 0 (count (get cluster :pinged)))))))))
@@ -189,23 +180,29 @@
 
 
 (deftest ack-timeout-message-tests
-  (testing "GIVEN a cluster with 2 members"
-    (let [others [:a :b]
+  (testing "GIVEN a cluster with 3 members and a k-factor of 1.0"
+    (let [others [:a :b :c]
           me :me
-          [cluster msgs] (join-cluster* me others)]
+          [cluster msgs] (join-cluster* me others {:k-factor 1.0})]
       (testing "WHEN I send a ping message to one of the members"
         (let [[cluster msgs] (ping-member* cluster)
               target (first (:pinged cluster))
-              other (->> cluster
+              others (-> cluster
                          get-members
-                         (filter #(not= % target))
-                         first)]
+                         set
+                         (disj target))]
           (testing "AND a timeout message is received"
             (let [[cluster msgs] (receive-message* cluster
                                                    {:type :timeout
-                                                    :target target})]
-              (testing "THEN the other member should be sent a ping-req message"
-                (is (= {:to other
-                        :msg {:type :ping-req
-                              :target target}}
-                       (first msgs)))))))))))
+                                                    :target target})
+                  
+                  msgs (apply hash-set msgs)]
+              (testing "THEN both other members should be sent a ping-req message"
+                (is (contains? msgs
+                               {:to (first others)
+                                :msg {:type :ping-req
+                                      :target target}})
+                    (contains? msgs
+                               {:to (second others)
+                                :msg {:type :ping-req
+                                      :target target}}))))))))))
