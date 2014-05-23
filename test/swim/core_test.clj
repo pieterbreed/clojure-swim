@@ -201,8 +201,21 @@
                 (is (contains? msgs
                                {:to (first others)
                                 :msg {:type :ping-req
-                                      :target target}})
-                    (contains? msgs
-                               {:to (second others)
-                                :msg {:type :ping-req
-                                      :target target}}))))))))))
+                                      :target target}}))
+                (is  (contains? msgs
+                                {:to (second others)
+                                 :msg {:type :ping-req
+                                       :target target}})))
+              (testing "AND an ack is received from one of the others"
+                (let [first-other (first others)
+                      other-other (first (disj others first-other))
+                      [cluster & _] (receive-message* cluster
+                                                      {:type :ack
+                                                       :from first-other
+                                                       :for-target target})]
+                  (testing "THEN when the other other members sends an ack it should be a no-op"
+                    (let [[cluster-after-other-other & _] (receive-message* cluster
+                                                                      {:type :ack
+                                                                       :from other-other
+                                                                       :for-target target})]
+                      (is (= cluster cluster-after-other-other)))))))))))))
