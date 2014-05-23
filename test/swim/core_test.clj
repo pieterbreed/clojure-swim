@@ -191,9 +191,10 @@
                          get-members
                          set
                          (disj target))]
-          (testing "AND a timeout message is received"
+          (testing "AND a ping timeout message is received"
             (let [[cluster msgs] (receive-message* cluster
                                                    {:type :timeout
+                                                    :timeout-type :ping
                                                     :target target})
                   
                   msgs (apply hash-set msgs)]
@@ -219,3 +220,42 @@
                                                                        :from other-other
                                                                        :for-target target})]
                       (is (= cluster cluster-after-other-other)))))))))))))
+
+(deftest ack-timeout-and-ping-req-timeouts-tests
+  (testing "GIVEN a cluster with 3 members and a k-factor of 2/3"
+    (let [members [:a :b :c]
+          me :me
+          [cluster msgs] (join-cluster* me members
+                                        {:k-factor 0.67})]
+      (testing "WHEN one of the cluster members is pinged"
+        (let [[cluster msgs target] (ping-member* cluster)]
+          (testing "AND a timeout is received for the target's ping"
+            (let [[cluster new-msgs] (receive-message* cluster
+                                                       {:type :timeout
+                                                        :timeout-type :ping
+                                                        :target target})
+                  msgs (concat msgs new-msgs)]
+              (testing "THEN two members should have been sent ping-reqs"
+                (let [ping-req-targets (->> new-msgs
+                                            (filter #(= :ping-req (-> % :msg :type)))
+                                            (map :to)
+                                            (apply list))]
+                  (is (= 2 (count ping-req-targets)))
+                  (testing "WHEN timeouts are received for both ping-reqs"
+                    (let [[cluster msgs & _] (receive-message* cluster
+                                                               {:type :timeout
+                                                                :timeout-type :ping-req
+                                                                :from (first ping-req-targets)
+                                                                :target target})
+                          [cluster new-msgs & _] (receive-message* cluster
+                                                                   {:type :timeout
+                                                                    :timeout-type :ping-req
+                                                                    :from (second ping-req-targets)
+                                                                    :target target})
+                          msgs (concat msgs new-msgs)]
+                      (testing "THEN the target should be marked as suspicious"
+                        (is (some #{target} (get-suspicious-members cluster))))
+                      (testing "THEN a messages should have been sent out to the cluster that that member has been marked as suspicious"
+                        (some #(= % {:type :suspicious
+                                     :target target})
+                              (map :msg new-msgs))))))))))))))

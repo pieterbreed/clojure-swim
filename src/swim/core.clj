@@ -144,6 +144,11 @@ options:
                                      :target for-target})]
     (ping-target* cluster '() for-target)))
 
+(defn get-suspicious-members
+  "Gets all of the members of the cluster that is currently suspected"
+  [cluster]
+  '())
+
 (defn foo
   "I don't do a whole lot."
   [x]
