@@ -13,7 +13,7 @@
 (defn get-incarnation-number
   "Retrieves the this node's incarnation number"
   [cluster]
-  0)
+  (:incarnation-nr cluster))
 
 (defn get-incarnation-number-for
   "Retrieves the local incarnation number for a member"
@@ -35,7 +35,8 @@
 
 (defn -init-cluster
   [cluster]
-  [cluster '()])
+  [(merge cluster {:incarnation-nr 0})
+   '()])
 
 (defn join-cluster*
   "Creates a handle to a swim cluster using local id which must be unique to the cluster:
@@ -194,10 +195,21 @@ options:
   [cluster {:keys [target incarnation-nr]}]
   [cluster '()])
 
+(defn -receive-me-suspected
+  [cluster from]
+  (let [cluster (update-in cluster [:incarnation-nr] inc)]
+    [cluster (list {:to from
+                    :msg {:type :alive
+                          :target (get-my-address cluster)
+                          :incarnation-nr (get-incarnation-number cluster)}})]))
+
 (defmethod receive-message*
   :suspected
-  [cluster {:keys [target incarnation-nr]}]
-  [cluster '()])
+  [cluster {:keys [target incarnation-nr from]}]
+  (if (= (get-my-address cluster)
+         target)
+    (-receive-me-suspected cluster from)
+    [cluster '()]))
 
 (defmethod receive-message*
   :confirm
