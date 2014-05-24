@@ -259,3 +259,136 @@
                         (some #(= % {:type :suspicious
                                      :target target})
                               (map :msg new-msgs))))))))))))))
+
+(deftest members-joining-test
+  (testing "GIVEN a cluster with 2 members"
+    (let [[cluster & _] (join-cluster* :me [:a :b])]
+      (testing "WHEN a new-member message is received"
+        (let [[cluster & _] (receive-message* cluster {:type :member-joining
+                                                       :member-address :c})]
+          (testing "THEN the number of members should be 3"
+            (is (= 3 (count (get-members cluster)))))
+
+          (testing "THEN the new member should be a part of the members list"
+            (is (some #{:c} (get-members cluster)))))))))
+
+(deftest members-leaving-test
+  (testing "GIVEN a cluster with 3 members"
+    (let [[cluster & _] (join-cluster* :me [:a :b :c])]
+      (testing "WHEN a new-member message is received"
+        (let [[cluster & _] (receive-message* cluster {:type :member-leaving
+                                                       :member-address :c})]
+          (testing "THEN the number of members should be 2"
+            (is (= 2 (count (get-members cluster)))))
+
+          (testing "THEN the new member should be a part of the members list"
+            (is (not (some #{:c} (get-members cluster))))))))))
+
+(deftest incarnation-numbers-tests
+  (testing "GIVEN a cluster"
+    (let [[cluster & _] (join-cluster* :me [])]
+      (testing "THEN I should have an incarnation number of 0"
+        (is (= 0 (get-incarnation-number cluster))))))
+
+  (testing "GIVEN a cluster with 2 members"
+    (let [[cluster & _] (join-cluster* :me [:a :b])]
+
+      (testing "THEN each member should have a default incarnation number of 0"
+        (is (every? true? (map #(get-incarnation-number-for cluster %) (get-members cluster)))))
+
+      (testing "WHEN an :alive message is received for :a"
+        (let [old-incarnation-nr (get-incarnation-number-for cluster :a)
+              [cluster & _] (receive-message* cluster {:type :alive
+                                                       :incarnation-nr 1
+                                                       :target :a})]
+          (testing "THEN the incarnation member for :a should increase"
+            (is (> old-incarnation-nr (get-incarnation-number-for cluster :a))))
+
+          (testing "THEN the status of :a should be alive"
+            (is (member-is-alive cluster :a)))))
+
+      (testing "WHEN a :suspected message is received for :a"
+        (let [old-nr (get-incarnation-number-for cluster :a)
+              [cluster & _] (receive-message* cluster
+                                              {:type :suspected
+                                               :incarnation-nr 1
+                                               :target :a})]
+
+          (testing "THEN the incarnation nr for :a should increase"
+            (is (> old-nr (get-incarnation-number-for cluster :a))))
+
+          (testing "THEN the status of :a should be suspected"
+            (is (member-is-suspected cluster :a))))
+
+        (testing "AND a :confirm message is received for :a with the same incarnation number"
+          (let [[cluster & _] (receive-message* cluster
+                                                {:type :confirm
+                                                 :incarnation-nr 1
+                                                 :target :a})]
+
+            (testing "THEN the status of :a should be dead"
+              (is (member-is-dead cluster :a)))))
+
+        (testing "AND a not-newer alive message is received for :a"
+          (let [old-nr (get-incarnation-number-for cluster :a)
+                [cluster & _] (receive-message* cluster
+                                                {:type :alive
+                                                 :incarnation-nr -1
+                                                 :target :a})]
+
+            (testing "THEN the incarnation number should not change"
+              (is (= old-nr (get-incarnation-number-for cluster :a))))
+
+            (testing "THEN the status for :a should still be suspected"
+              (is (member-is-suspected cluster :a)))))
+
+        (testing "AND a newer :alive message is received for :a"
+          (let [old-nr (get-incarnation-number-for cluster :a)
+                [cluster & _] (receive-message* cluster
+                                                {:type :alive
+                                                 :target :a
+                                                 :incarnation-nr 2})]
+
+            (testing "THEN the incarnation nr for :a should increase"
+              (is (> old-nr (get-incarnation-number-for cluster :a))))
+
+            (testing "THEN the status of :a should be alive"
+              (is (member-is-alive cluster :a)))))))))
+
+(deftest initial-alive-tests
+  (testing "GIVEN a member about to join a cluster"
+    (let [me :me
+          members [:a]]
+      (testing "WHEN the cluster is joined"
+        (let [[cluster msgs] (join-cluster* me members)]
+          (testing "THEN an initial alive should be sent to some members"
+            (is (some #{:type :alive
+                        :incarnation-nr 0
+                        :target :me}
+                      (map :msg msgs)))))))))
+
+(deftest when-to-send-alive-msg-tests
+  (testing "GIVEN a member joined to a cluster"
+    (let [[cluster & _] (join-cluster* :me [:a :b :c])]
+      (testing "WHEN a (suspected :me) message is received"
+        (let [old-nr (get-incarnation-number cluster)
+              [cluster msgs] (receive-message* cluster
+                                               {:type :suspected
+                                                :target :me
+                                                :incarnation-number 0})]
+          (testing "THEN an :alive message should be sent out to some members with an increased incarnation number"
+            (is (some #{:type :alive
+                        :target :me
+                        :incarnation-nr (inc old-nr)}
+                      (map :msg msgs))))))
+
+      (testing "WHEN an :ack is received from :a"
+        (let [[cluster msgs] (receive-message* cluster
+                                               {:type :ack
+                                                :from :a
+                                                :for-target :a})]
+          (testing "THEN an :alive should be sent for :a"
+            (is (some #{:type :alive
+                        :incarnation-nr (get-incarnation-number-for cluster :a)
+                        :target :a}
+                      (map :msg msgs)))))))))

@@ -99,6 +99,17 @@ options:
 
 (defmulti receive-message* (fn [cluster msg]
                              (:type msg)))
+
+(defmethod receive-message*
+  :member-joining
+  [cluster {:keys [member-address]}]
+  [cluster '()])
+
+(defmethod receive-message*
+  :member-leaving
+  [cluster {:keys [member-address]}]
+  [cluster '()])
+
 (defmethod receive-message*
   :timeout
   [cluster {:keys [target]}]
@@ -144,10 +155,47 @@ options:
                                      :target for-target})]
     (ping-target* cluster '() for-target)))
 
+(defmethod receive-message*
+  :alive
+  [cluster {:keys [target incarnation-nr]}]
+  [cluster '()])
+
+(defmethod receive-message*
+  :suspected
+  [cluster {:keys [target incarnation-nr]}]
+  [cluster '()])
+
+(defmethod receive-message*
+  :confirm
+  [cluster {:keys [target incarnation-nr]}]
+  [cluster '()])
+
 (defn get-suspicious-members
   "Gets all of the members of the cluster that is currently suspected"
   [cluster]
   '())
+
+(defn get-incarnation-number
+  "Retrieves the this node's incarnation number"
+  [cluster]
+  0)
+
+(defn get-incarnation-number-for
+  "Retrieves the local incarnation number for a member"
+  [cluster target]
+  0)
+
+(defn member-is-alive
+  [cluster target]
+  true)
+
+(defn member-is-suspected
+  [cluster target]
+  true)
+
+(defn member-is-dead
+  [cluster target]
+  true)
 
 (defn foo
   "I don't do a whole lot."
