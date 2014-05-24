@@ -5,6 +5,34 @@
 ;; all API methods marked with '*' at the end of their name returns a vector
 ;; [new-cluster-state ((destination msg) <other results>)]
 
+(defn get-suspicious-members
+  "Gets all of the members of the cluster that is currently suspected"
+  [cluster]
+  '())
+
+(defn get-incarnation-number
+  "Retrieves the this node's incarnation number"
+  [cluster]
+  0)
+
+(defn get-incarnation-number-for
+  "Retrieves the local incarnation number for a member"
+  [cluster target]
+  0)
+
+(defn member-is-alive
+  [cluster target]
+  true)
+
+(defn member-is-suspected
+  [cluster target]
+  true)
+
+(defn member-is-dead
+  [cluster target]
+  true)
+
+
 (defn -init-cluster
   [cluster]
   [cluster '()])
@@ -129,23 +157,29 @@ options:
 (defmethod receive-message*
   :ack
   [cluster {:keys [from for-target]}]
-  (let [me (get-my-address cluster)]
-    (loop [needs-responses (->> (:ping-req cluster)
-                                (filter #(= (:target %) for-target))
-                                (map :from))
-           cluster (update-in-def cluster [:pinged] #{}
-                                  disj for-target)
-           msgs '()]
-      (if (= 0 (count needs-responses))
-        [cluster msgs]
-        (let [x (first needs-responses)
-              msg {:to x
-                   :msg {:type :ack
-                         :from me
-                         :for-target for-target}}]
-          (recur (rest needs-responses)
-                 (update-in cluster [:ping-req] disj x)
-                 (conj msgs msg))))))) 
+  (let [me (get-my-address cluster)
+        [cluster msgs] (loop [needs-responses (->> (:ping-req cluster)
+                                                   (filter #(= (:target %) for-target))
+                                                   (map :from))
+                              cluster (update-in-def cluster [:pinged] #{}
+                                                     disj for-target)
+                              msgs '()]
+                         (if (= 0 (count needs-responses))
+                           [cluster msgs]
+                           (let [x (first needs-responses)
+                                 msg {:to x
+                                      :msg {:type :ack
+                                            :from me
+                                            :for-target for-target}}]
+                             (recur (rest needs-responses)
+                                    (update-in cluster [:ping-req] disj x)
+                                    (conj msgs msg)))))]
+    (if (not= from for-target)
+      [cluster msgs]
+      [cluster (conj msgs {:to :disseminate
+                           :msg {:type :alive
+                                 :incarnation-nr (get-incarnation-number-for cluster for-target)
+                                 :target for-target}})])))
 
 (defmethod receive-message*
   :ping-req
@@ -170,32 +204,6 @@ options:
   [cluster {:keys [target incarnation-nr]}]
   [cluster '()])
 
-(defn get-suspicious-members
-  "Gets all of the members of the cluster that is currently suspected"
-  [cluster]
-  '())
-
-(defn get-incarnation-number
-  "Retrieves the this node's incarnation number"
-  [cluster]
-  0)
-
-(defn get-incarnation-number-for
-  "Retrieves the local incarnation number for a member"
-  [cluster target]
-  0)
-
-(defn member-is-alive
-  [cluster target]
-  true)
-
-(defn member-is-suspected
-  [cluster target]
-  true)
-
-(defn member-is-dead
-  [cluster target]
-  true)
 
 (defn foo
   "I don't do a whole lot."

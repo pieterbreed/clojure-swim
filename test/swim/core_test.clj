@@ -362,9 +362,9 @@
       (testing "WHEN the cluster is joined"
         (let [[cluster msgs] (join-cluster* me members)]
           (testing "THEN an initial alive should be sent to some members"
-            (is (some #{:type :alive
-                        :incarnation-nr 0
-                        :target :me}
+            (is (some #{{:type :alive
+                         :incarnation-nr 0
+                         :target :me}}
                       (map :msg msgs)))))))))
 
 (deftest when-to-send-alive-msg-tests
@@ -377,18 +377,18 @@
                                                 :target :me
                                                 :incarnation-number 0})]
           (testing "THEN an :alive message should be sent out to some members with an increased incarnation number"
-            (is (some #{:type :alive
-                        :target :me
-                        :incarnation-nr (inc old-nr)}
+            (is (some #{{:type :alive
+                         :target :me
+                         :incarnation-nr (inc old-nr)}}
                       (map :msg msgs))))))
 
-      (testing "WHEN an :ack is received from :a"
+      (testing "WHEN an :ack is received directly from :a"
         (let [[cluster msgs] (receive-message* cluster
                                                {:type :ack
                                                 :from :a
                                                 :for-target :a})]
           (testing "THEN an :alive should be sent for :a"
-            (is (some #{:type :alive
-                        :incarnation-nr (get-incarnation-number-for cluster :a)
-                        :target :a}
+            (is (some #{{:type :alive
+                         :incarnation-nr (get-incarnation-number-for cluster :a)
+                         :target :a}}
                       (map :msg msgs)))))))))
