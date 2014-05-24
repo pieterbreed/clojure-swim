@@ -8,7 +8,7 @@
 (defn get-suspicious-members
   "Gets all of the members of the cluster that is currently suspected"
   [cluster]
-  '())
+  (:suspected cluster))
 
 (defn get-incarnation-number
   "Retrieves the this node's incarnation number"
@@ -18,25 +18,29 @@
 (defn get-incarnation-number-for
   "Retrieves the local incarnation number for a member"
   [cluster target]
-  0)
-
-(defn member-is-alive
-  [cluster target]
-  true)
+  (-> cluster
+      :others
+      (get target)
+      :incarnation-nr
+      (or 0)))
 
 (defn member-is-suspected
   [cluster target]
-  true)
+  (-> cluster
+      :suspected
+      (contains? target)
+      not))
 
 (defn member-is-dead
   [cluster target]
-  true)
+  (-> cluster
+      :failed
+      (contains? target)))
 
-
-(defn -init-cluster
-  [cluster]
-  [(merge cluster {:incarnation-nr 0})
-   '()])
+(defn member-is-alive
+  [cluster target]
+  (and (not (member-is-dead cluster target))
+       (not (member-is-suspected cluster target))))
 
 (defn join-cluster*
   "Creates a handle to a swim cluster using local id which must be unique to the cluster:
@@ -47,11 +51,14 @@ options:
 }
 "
   ([my-address other-addresses options]
-     (-init-cluster
-      (merge {:k-factor 0.67}
-             options 
+     (merge {:k-factor 0.67
+             :suspected #{}
+             :failed #{}}
+            options 
             {:me my-address
-             :others other-addresses})))
+             :others (->> other-addresses
+                          (map #(hash-map % {}))
+                          (apply merge))}))
   ([my-address others]
      (join-cluster* my-address others {}))
   ([my-address]
@@ -60,7 +67,9 @@ options:
 (defn get-members
   "Gets a list of all of the members in the cluster"
   [cluster]
-  (:others cluster))
+  (-> cluster
+      :others
+      keys))
 
 (defn get-my-address
   "Returns the id of the cluster member passed in"
