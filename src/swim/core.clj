@@ -51,14 +51,16 @@ options:
 }
 "
   ([my-address other-addresses options]
-     (merge {:k-factor 0.67
-             :suspected #{}
-             :failed #{}}
-            options 
-            {:me my-address
-             :others (->> other-addresses
-                          (map #(hash-map % {}))
-                          (apply merge))}))
+     [(merge {:k-factor 0.67
+              :suspected #{}
+              :failed #{}
+              :incarnation-nr 0}
+             options 
+             {:me my-address
+              :others (->> other-addresses
+                           (map #(hash-map % {}))
+                           (apply merge))})
+      '()])
   ([my-address others]
      (join-cluster* my-address others {}))
   ([my-address]
