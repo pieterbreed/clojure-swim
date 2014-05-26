@@ -42,6 +42,18 @@
   (and (not (member-is-dead cluster target))
        (not (member-is-suspected cluster target))))
 
+(defn get-my-address
+  "Returns the id of the cluster member passed in"
+  [cluster]
+  (:me cluster))
+
+(defn get-members
+  "Gets a list of all of the members in the cluster"
+  [cluster]
+  (-> cluster
+      :others
+      keys))
+
 (defn join-cluster*
   "Creates a handle to a swim cluster using local id which must be unique to the cluster:
 options:
@@ -51,32 +63,26 @@ options:
 }
 "
   ([my-address other-addresses options]
-     [(merge {:k-factor 0.67
-              :suspected #{}
-              :failed #{}
-              :incarnation-nr 0}
-             options 
-             {:me my-address
-              :others (->> other-addresses
-                           (map #(hash-map % {}))
-                           (apply merge))})
-      '()])
+     (letfn [(send-join-message [cluster target]
+               {:to target
+                :msg {:type :alive
+                      :incarnation-nr (:incarnation-nr cluster)
+                      :target (get-my-address cluster)}})]
+       (let [cluster (merge {:k-factor 0.67
+                             :suspected #{}
+                             :failed #{}
+                             :incarnation-nr 0}
+                            options 
+                            {:me my-address
+                             :others (->> other-addresses
+                                          (map #(hash-map % {}))
+                                          (apply merge))})]
+         [cluster (map #(send-join-message cluster %) (:others cluster))])))
   ([my-address others]
      (join-cluster* my-address others {}))
   ([my-address]
      (join-cluster* my-address [] {})))
 
-(defn get-members
-  "Gets a list of all of the members in the cluster"
-  [cluster]
-  (-> cluster
-      :others
-      keys))
-
-(defn get-my-address
-  "Returns the id of the cluster member passed in"
-  [cluster]
-  (:me cluster))
 
 (defn find-ping-target*
   "Chooses a member to ping, returns the cluster and the target in a vector"
