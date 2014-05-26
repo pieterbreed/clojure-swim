@@ -289,14 +289,31 @@
 (deftest members-leaving-test
   (testing "GIVEN a cluster with 3 members"
     (let [[cluster & _] (join-cluster* :me [:a :b :c])]
-      (testing "WHEN a new-member message is received"
+      (testing "WHEN a member-leaving message is received"
         (let [[cluster & _] (receive-message* cluster {:type :member-leaving
                                                        :member-address :c})]
           (testing "THEN the number of members should be 2"
             (is (= 2 (count (get-members cluster)))))
 
           (testing "THEN the new member should be a part of the members list"
-            (is (not (some #{:c} (get-members cluster))))))))))
+            (is (not (some #{:c} (get-members cluster)))))
+
+          (testing "AND (* 2 (count members)) members are pinged"
+
+            (let [[cluster targets] (loop [cl cluster
+                                           targets '()
+                                           c (* 2 (count (get-members cluster)))]
+                                      (if (= 0 c)
+                                        [cl targets]
+                                        (let [[cl _ target] (find-ping-target* cl)]
+                                          (recur cl (conj targets target) (dec c)))))
+                  targets (frequencies targets)]
+              (testing "THEN there should be 2 recipients for ping messages"
+                (is (= 2 (count (keys targets)))))
+
+              (testing "THEN :a and :b should the targets for pings"
+                (is (and (contains? targets :a)
+                         (contains? targets :b)))))))))))
 
 (deftest incarnation-numbers-tests
   (testing "GIVEN a cluster"

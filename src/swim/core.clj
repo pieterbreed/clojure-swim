@@ -60,6 +60,12 @@
   (let [cluster (update-in cluster [:others] conj {new-member-address {}})]
     [cluster '()]))
 
+(defn -leave-member-from-cluster*
+  [cluster target]
+  [(-> cluster
+       (update-in [:others] dissoc target))
+   '()])
+
 (defn join-cluster*
   "Creates a handle to a swim cluster using local id which must be unique to the cluster:
 options:
@@ -100,20 +106,25 @@ options:
 (defn find-ping-target*
   "Chooses a member to ping, returns the cluster and the target in a vector"
   [cluster]
-  (let [members (get cluster :member-ping-order (get-members cluster))
+  (let [members (get-members cluster)
+        members-ping-order (get cluster :member-ping-order (vec members))
+        members-ping-order (->> members-ping-order
+                                (filter #(some #{%} members))
+                                vec)
         i (-> (get cluster :last-ping-target -1)
               inc
-              (mod (count members)))
-        members (if (= 0 i)
-                  (loop [mbrs members]
-                    (if (not= members mbrs)
-                      mbrs
-                      (recur (shuffle mbrs))))
-                  members)
-        target (get members i)
+              (max (count members-ping-order))
+              (mod (count members-ping-order)))
+        members-ping-order (if (= 0 i)
+                             (loop [mbrs members-ping-order]
+                               (if (not= members-ping-order mbrs)
+                                 mbrs
+                                 (recur (shuffle mbrs))))
+                             members-ping-order)
+        target (get members-ping-order i)
         cluster (assoc cluster
                   :last-ping-target i
-                  :member-ping-order members)]
+                  :member-ping-order members-ping-order)]
     (vector cluster '() target)))
 
 (defn find-k-number
@@ -167,6 +178,7 @@ options:
 (defmethod receive-message*
   :member-leaving
   [cluster {:keys [member-address]}]
+  
   [cluster '()])
 
 (defmethod receive-message*
