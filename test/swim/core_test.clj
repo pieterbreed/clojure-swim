@@ -172,11 +172,11 @@
                                                             :for-target :b})]
 
               (testing "THEN it should be forwarded back to :a"
-                (is (= {:to :a
-                        :msg {:type :ack
-                              :from (get-my-address cluster)
-                              :for-target :b}}
-                       (first msgs)))))))))))
+                (is (some #{{:to :a
+                             :msg {:type :ack
+                                   :from (get-my-address cluster)
+                                   :for-target :b}}}
+                          msgs))))))))))
 
 
 (deftest ack-timeout-message-tests
