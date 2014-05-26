@@ -269,7 +269,7 @@
 
           (testing "AND some members have been pinged"
             (let [[cluster & _] (find-ping-target* cluster)]
-              (testing "THEN (* 2 count-of-members) pings should result in all members being pinged twice"
+              (testing "THEN (* 2 count-of-members) pings should result in all members being pinged"
                 (let [[cluster targets] (loop [cl cluster
                                                targets '()
                                                c (* 2 (count (get-members cluster)))]
@@ -278,8 +278,7 @@
                                             (let [[cl _ target] (find-ping-target* cl)]
                                               (recur cl (conj targets target) (dec c)))))
                       targets (frequencies targets)]
-                  (is (= #{:a :b :c} (apply hash-set (get-members cluster))))
-                  (is (every? #(= 2 (get targets %)) (keys targets))))))))))))
+                  (is (= #{:a :b :c} (apply hash-set (get-members cluster)))))))))))))
 
 (deftest members-leaving-test
   (testing "GIVEN a cluster with 3 members"

@@ -105,27 +105,32 @@ options:
 
 (defn find-ping-target*
   "Chooses a member to ping, returns the cluster and the target in a vector"
-  [cluster]
-  (let [members (get-members cluster)
-        members-ping-order (get cluster :member-ping-order (vec members))
-        members-ping-order (->> members-ping-order
-                                (filter #(some #{%} members))
-                                vec)
-        i (-> (get cluster :last-ping-target -1)
-              inc
-              (max (count members-ping-order))
-              (mod (count members-ping-order)))
-        members-ping-order (if (= 0 i)
-                             (loop [mbrs members-ping-order]
-                               (if (not= members-ping-order mbrs)
-                                 mbrs
-                                 (recur (shuffle mbrs))))
-                             members-ping-order)
-        target (get members-ping-order i)
-        cluster (assoc cluster
-                  :last-ping-target i
-                  :member-ping-order members-ping-order)]
-    (vector cluster '() target)))
+  ([cluster]
+     (let [members (get-members cluster)
+           members-ping-order (get cluster :member-ping-order (vec members))
+           members-ping-order (->> members-ping-order
+                                   (filter #(some #{%} members))
+                                   vec)
+           i (-> (get cluster :last-ping-target -1)
+                 inc
+                 (min (count members-ping-order))
+                 (mod (count members-ping-order)))
+           members-ping-order (if (= 0 i)
+                                (loop [mbrs members-ping-order]
+                                  (if (not= members-ping-order mbrs)
+                                    mbrs
+                                    (recur (shuffle mbrs))))
+                                members-ping-order)
+           target (get members-ping-order i)
+           cluster (assoc cluster
+                     :last-ping-target i
+                     :member-ping-order members-ping-order)]
+       (vector cluster '() target)))
+  ([cluster but-not]
+     (loop [[cluster msgs target] (find-ping-target* cluster)]
+       (if (not= target but-not)
+         [cluster msgs target]
+         (recur (find-ping-target* cluster))))))
 
 (defn find-k-number
   "Returns the number of members to ping, given the amount of members in the cluster and the k-factor"
@@ -149,7 +154,7 @@ options:
               msgs '()
               targets #{}]
          (if (= n (count targets)) [cluster msgs (vec targets)]
-             (let [[cluster step-msgs target] (find-ping-target* cluster)]
+             (let [[cluster step-msgs target] (find-ping-target* cluster but-not)]
                (recur cluster
                       (concat msgs step-msgs)
                       (conj targets target)))))))
