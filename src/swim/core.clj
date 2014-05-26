@@ -54,6 +54,12 @@
       :others
       keys))
 
+(defn -join-member-to-cluster*
+  "Joins a member to a cluster and performs any init associated with that member"
+  [cluster new-member-address]
+  (let [cluster (update-in cluster [:others] conj {new-member-address {}})]
+    [cluster '()]))
+
 (defn join-cluster*
   "Creates a handle to a swim cluster using local id which must be unique to the cluster:
 options:
@@ -63,7 +69,7 @@ options:
 }
 "
   ([my-address other-addresses options]
-     (letfn [(send-join-message [cluster target]
+     (letfn [(join-message [cluster target]
                {:to target
                 :msg {:type :alive
                       :incarnation-nr (:incarnation-nr cluster)
@@ -74,10 +80,17 @@ options:
                              :incarnation-nr 0}
                             options 
                             {:me my-address
-                             :others (->> other-addresses
-                                          (map #(hash-map % {}))
-                                          (apply merge))})]
-         [cluster (map #(send-join-message cluster %) (:others cluster))])))
+                             :others {}})
+             [cluster msgs] (loop [cl cluster
+                                   targets other-addresses
+                                   msgs '()]
+                              (if (nil? (first targets))
+                                [cl msgs]
+                                (let [[cl new-msgs] (-join-member-to-cluster* cl (first targets))]
+                                  (recur cl
+                                         (rest targets)
+                                         (conj msgs (join-message cl (first targets)))))))]
+         [cluster msgs])))
   ([my-address others]
      (join-cluster* my-address others {}))
   ([my-address]
@@ -149,7 +162,7 @@ options:
 (defmethod receive-message*
   :member-joining
   [cluster {:keys [member-address]}]
-  [cluster '()])
+  (-join-member-to-cluster* cluster member-address))
 
 (defmethod receive-message*
   :member-leaving
