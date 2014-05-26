@@ -1,7 +1,7 @@
 (ns swim.core-test
   (:require [clojure.test :refer :all]
             [swim.core :refer :all]
-            
+            [swim.utils :refer :all]
             [swim.channels-test :refer :all]))
 
 (defn cluster?
@@ -94,7 +94,7 @@
           [cluster & _] (join-cluster* :me members {:k-factor 0.5})]
 
       (testing "AND I'm choosing the default number of k-ping-targets"
-        (let [[cluster _ targets] (find-k-ping-targets* cluster)]
+        (let [[cluster _ targets] (find-k-ping-targets* cluster nil)]
 
           (testing "THEN I should get half of the number of members back as targets"
             (is (/ (count members) 2)
@@ -111,10 +111,11 @@
             
             (let [[cluster _ targets] (find-k-ping-targets*
                                        cluster
-                                       (* 2  (count members)))]
+                                       (* 2 (count members))
+                                       nil)]
 
-              (testing "THEN I should only be able to pick (n - 1) targets at maximum"
-                (is (= (- (count members) 1)
+              (testing "THEN I should only be able to pick n targets at maximum"
+                (is (= (count members)
                        (count targets))))
 
               (testing "THEN there should be no repititions"
@@ -180,8 +181,7 @@
           me :me
           [cluster msgs] (join-cluster* me others {:k-factor 1.0})]
       (testing "WHEN I send a ping message to one of the members"
-        (let [[cluster msgs] (ping-member* cluster)
-              target (first (:pinged cluster))
+        (let [[cluster msgs target] (ping-member* cluster)
               others (-> cluster
                          get-members
                          set
@@ -287,6 +287,7 @@
       (testing "WHEN a member-leaving message is received"
         (let [[cluster & _] (receive-message* cluster {:type :member-leaving
                                                        :member-address :c})]
+
           (testing "THEN the number of members should be 2"
             (is (= 2 (count (get-members cluster)))))
 

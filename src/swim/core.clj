@@ -137,9 +137,14 @@ options:
       (min nr-of-members)))
 
 (defn find-k-ping-targets*
-  "Choose at most (min k (n - 1)) targes from the pool of members"
-  ([cluster k]
-     (let [n (min k (- (count (get-members cluster)) 1))]
+  "Choose at most (min k (n - 1)) targes from the pool of members, but won't return but-not"
+  ([cluster k but-not]
+     (let [eligible-members (-> cluster
+                                get-members
+                                set
+                                (disj but-not))
+           n (min k
+                  (count eligible-members))]
        (loop [cluster cluster
               msgs '()
               targets #{}]
@@ -148,9 +153,11 @@ options:
                (recur cluster
                       (concat msgs step-msgs)
                       (conj targets target)))))))
-  ([cluster]
-     (find-k-ping-targets* cluster (find-k-number (count (get-members cluster))
-                                                  (:k-factor cluster)))))
+  ([cluster but-not]
+     (find-k-ping-targets* cluster
+                           (find-k-number (count (get-members cluster))
+                                          (:k-factor cluster))
+                           but-not)))
 
 (defn ping-target*
   "Pings a specific member"
@@ -178,14 +185,14 @@ options:
 (defmethod receive-message*
   :member-leaving
   [cluster {:keys [member-address]}]
-  [(-leave-member-from-cluster* cluster member-address) '()])
+  (-leave-member-from-cluster* cluster member-address))
 
 (defmethod receive-message*
   :timeout
   [cluster {:keys [target]}]
   (let [pinged (:pinged cluster)]
     (if (some #{target} pinged)
-      (let [[cluster msgs targets] (find-k-ping-targets* cluster)]
+      (let [[cluster msgs targets] (find-k-ping-targets* cluster target)]
         (loop [ts targets
                msgs msgs]
           (if (= 0 (count ts))
