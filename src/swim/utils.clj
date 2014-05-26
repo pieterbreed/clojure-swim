@@ -1,5 +1,10 @@
 (ns swim.utils)
 
+(defn debug [x]
+  (print "DEBUG: ")
+  (clojure.pprint/pprint x)
+  x)
+
 (defn round
   "Naive implementation of rounding for floating point numbers. Returns an int. Rounds up, away from 0. Not bankers rounding"
   [fp]

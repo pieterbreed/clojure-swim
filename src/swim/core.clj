@@ -178,8 +178,7 @@ options:
 (defmethod receive-message*
   :member-leaving
   [cluster {:keys [member-address]}]
-  
-  [cluster '()])
+  [(-leave-member-from-cluster* cluster member-address) '()])
 
 (defmethod receive-message*
   :timeout

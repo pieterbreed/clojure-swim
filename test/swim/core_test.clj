@@ -4,11 +4,6 @@
             
             [swim.channels-test :refer :all]))
 
-(defn debug [x]
-  (print "DEBUG: ")
-  (clojure.pprint/pprint x)
-  x)
-
 (defn cluster?
   "Tests whether a value represents a valid cluster"
   [v]
