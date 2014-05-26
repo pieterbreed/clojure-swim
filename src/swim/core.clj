@@ -81,7 +81,7 @@ options:
 (defn find-ping-target*
   "Chooses a member to ping, returns the cluster and the target in a vector"
   [cluster]
-  (let [members (get-members cluster)
+  (let [members (get cluster :member-ping-order (get-members cluster))
         i (-> (get cluster :last-ping-target -1)
               inc
               (mod (count members)))
@@ -94,7 +94,7 @@ options:
         target (get members i)
         cluster (assoc cluster
                   :last-ping-target i
-                  :others members)]
+                  :member-ping-order members)]
     (vector cluster '() target)))
 
 (defn find-k-number
