@@ -320,7 +320,7 @@
     (let [[cluster & _] (join-cluster* :me [:a :b])]
 
       (testing "THEN each member should have a default incarnation number of 0"
-        (is (every? true? (map #(get-incarnation-number-for cluster %) (get-members cluster)))))
+        (is (every? (partial = 0) (map #(get-incarnation-number-for cluster %) (get-members cluster)))))
 
       (testing "WHEN an :alive message is received for :a"
         (let [old-incarnation-nr (get-incarnation-number-for cluster :a)

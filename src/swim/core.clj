@@ -57,7 +57,7 @@
 (defn -join-member-to-cluster*
   "Joins a member to a cluster and performs any init associated with that member"
   [cluster new-member-address]
-  (let [cluster (update-in cluster [:others] conj {new-member-address {}})]
+  (let [cluster (update-in cluster [:others] conj {new-member-address {:incarnation-nr 0}})]
     [cluster '()]))
 
 (defn -leave-member-from-cluster*
