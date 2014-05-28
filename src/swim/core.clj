@@ -270,7 +270,10 @@ options:
 (defmethod receive-message*
   :confirm
   [cluster {:keys [target incarnation-nr]}]
-  [cluster '()])
+  [(-> cluster
+       (update-in [:suspected] disj target)
+       (update-in [:failed] conj target))
+   '()])
 
 
 (defn foo
