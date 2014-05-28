@@ -28,8 +28,7 @@
   [cluster target]
   (-> cluster
       :suspected
-      (contains? target)
-      not))
+      (contains? target)))
 
 (defn member-is-dead
   [cluster target]

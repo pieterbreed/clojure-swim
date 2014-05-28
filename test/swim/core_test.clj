@@ -334,15 +334,15 @@
           (testing "THEN the status of :a should be alive"
             (is (member-is-alive cluster :a)))))
 
-      (testing "WHEN a :suspected message is received for :a"
+      (testing "WHEN a :suspected message is received for :a with a higher incarnation nr"
         (let [old-nr (get-incarnation-number-for cluster :a)
               [cluster & _] (receive-message* cluster
                                               {:type :suspected
-                                               :incarnation-nr 1
+                                               :incarnation-nr (inc old-nr)
                                                :target :a})]
 
           (testing "THEN the incarnation nr for :a should increase"
-            (is (> old-nr (get-incarnation-number-for cluster :a))))
+            (is (>= old-nr (get-incarnation-number-for cluster :a))))
 
           (testing "THEN the status of :a should be suspected"
             (is (member-is-suspected cluster :a))))
