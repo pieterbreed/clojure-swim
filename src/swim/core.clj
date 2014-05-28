@@ -191,9 +191,8 @@ options:
   [cluster {:keys [member-address]}]
   (-leave-member-from-cluster* cluster member-address))
 
-(defmethod receive-message*
-  :timeout
-  [cluster {:keys [target]}]
+(defn -receive-ping-timeout*
+  [cluster target]
   (let [pinged (:pinged cluster)]
     (if (some #{target} pinged)
       (let [[cluster msgs targets] (find-k-ping-targets* cluster target)]
@@ -206,6 +205,17 @@ options:
                                        :msg {:type :ping-req
                                              :target target}}))))))
       [cluster '()])))
+
+(defn -receive-ping-req-timeout*
+  [cluster target]
+  [cluster '()])
+
+(defmethod receive-message*
+  :timeout
+  [cluster {:keys [target timeout-type]}]
+  (condp = timeout-type
+    :ping (-receive-ping-timeout* cluster target)
+    :ping-req (-receive-ping-req-timeout* cluster target)))
 
 (defmethod receive-message*
   :ack
