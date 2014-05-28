@@ -264,6 +264,7 @@ options:
 (defmethod receive-message*
   :suspected
   [cluster {:keys [target incarnation-nr from]}]
+
   (let [[cluster msgs] (if (= (get-my-address cluster) target)
                          (-receive-me-suspected cluster from)
                          [(update-in cluster [:suspected] conj target) '()])]

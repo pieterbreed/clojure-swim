@@ -345,39 +345,39 @@
             (is (>= old-nr (get-incarnation-number-for cluster :a))))
 
           (testing "THEN the status of :a should be suspected"
-            (is (member-is-suspected cluster :a))))
+            (is (member-is-suspected cluster :a)))
 
-        (testing "AND a :confirm message is received for :a with the same incarnation number"
-          (let [[cluster & _] (receive-message* cluster
-                                                {:type :confirm
-                                                 :incarnation-nr (inc (:incarnation-nr cluster))
-                                                 :target :a})]
+          (testing "AND a :confirm message is received for :a with the same incarnation number"
+            (let [[cluster & _] (receive-message* cluster
+                                                  {:type :confirm
+                                                   :incarnation-nr (inc (:incarnation-nr cluster))
+                                                   :target :a})]
 
-            (testing "THEN the status of :a should be dead"
-              (is (member-is-dead cluster :a)))))
+              (testing "THEN the status of :a should be dead"
+                (is (member-is-dead cluster :a)))))
 
-        (testing "AND a not-newer alive message is received for :a"
-          (let [old-nr (get-incarnation-number-for cluster :a)
-                [cluster & _] (receive-message* cluster
-                                                {:type :alive
-                                                 :incarnation-nr -1
-                                                 :target :a})]
+          (testing "AND a not-newer alive message is received for :a"
+            (let [old-nr (get-incarnation-number-for cluster :a)
+                  [cluster & _] (receive-message* cluster
+                                                  {:type :alive
+                                                   :incarnation-nr -1
+                                                   :target :a})]
 
-            (testing "THEN the incarnation number should not change"
-              (is (= old-nr (get-incarnation-number-for cluster :a))))
+              (testing "THEN the incarnation number should not change"
+                (is (= old-nr (get-incarnation-number-for cluster :a))))
 
-            (testing "THEN the status for :a should still be suspected"
-              (is (member-is-suspected cluster :a)))))
+              (testing "THEN the status for :a should still be suspected"
+                (is (member-is-suspected cluster :a))))))
 
         (testing "AND a newer :alive message is received for :a"
           (let [old-nr (get-incarnation-number-for cluster :a)
                 [cluster & _] (receive-message* cluster
                                                 {:type :alive
                                                  :target :a
-                                                 :incarnation-nr 2})]
+                                                 :incarnation-nr (inc old-nr)})]
 
             (testing "THEN the incarnation nr for :a should increase"
-              (is (> old-nr (get-incarnation-number-for cluster :a))))
+              (is (< old-nr (get-incarnation-number-for cluster :a))))
 
             (testing "THEN the status of :a should be alive"
               (is (member-is-alive cluster :a)))))))))
