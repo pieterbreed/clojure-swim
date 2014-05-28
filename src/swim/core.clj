@@ -246,7 +246,11 @@ options:
 (defmethod receive-message*
   :alive
   [cluster {:keys [target incarnation-nr]}]
-  [cluster '()])
+  (let [cluster (-> cluster
+                    (update-in-def [:failed] #{} disj target)
+                    (update-in-def [:suspected] #{} disj target)
+                    (update-in [:others] #(update-in % [target] assoc :incarnation-nr incarnation-nr)))]
+    [cluster '()]))
 
 (defn -receive-me-suspected
   [cluster from]

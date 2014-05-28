@@ -324,11 +324,12 @@
 
       (testing "WHEN an :alive message is received for :a"
         (let [old-incarnation-nr (get-incarnation-number-for cluster :a)
+              new-incarnation-nr 2
               [cluster & _] (receive-message* cluster {:type :alive
-                                                       :incarnation-nr 1
+                                                       :incarnation-nr new-incarnation-nr
                                                        :target :a})]
-          (testing "THEN the incarnation member for :a should increase"
-            (is (> old-incarnation-nr (get-incarnation-number-for cluster :a))))
+          (testing "THEN the incarnation member for :a should be the same as that of the alive message"
+            (is (= new-incarnation-nr (get-incarnation-number-for cluster :a))))
 
           (testing "THEN the status of :a should be alive"
             (is (member-is-alive cluster :a)))))
