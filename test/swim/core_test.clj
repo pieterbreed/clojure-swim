@@ -350,7 +350,7 @@
         (testing "AND a :confirm message is received for :a with the same incarnation number"
           (let [[cluster & _] (receive-message* cluster
                                                 {:type :confirm
-                                                 :incarnation-nr 1
+                                                 :incarnation-nr (inc (:incarnation-nr cluster))
                                                  :target :a})]
 
             (testing "THEN the status of :a should be dead"
