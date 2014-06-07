@@ -196,26 +196,51 @@ options:
   (let [pinged (:pinged cluster)]
     (if (some #{target} pinged)
       (let [[cluster msgs targets] (find-k-ping-targets* cluster target)]
-        (loop [ts targets
+        (loop [cluster cluster
+               ts targets
                msgs msgs]
           (if (= 0 (count ts))
             [cluster msgs]
-            (recur (rest ts)
-                   (concat msgs (list {:to (first ts)
-                                       :msg {:type :ping-req
-                                             :target target}}))))))
+            (let [ping-req-target (first ts)
+                  other-targets (rest ts)]
+              (recur (update-in-def cluster [:ping-reqed] #{}
+                                    (fn [x]
+                                      (conj x {:to ping-req-target
+                                               :target target})))
+                     other-targets
+                     (concat msgs (list {:to ping-req-target
+                                         :msg {:type :ping-req
+                                               :target target}})))))))
       [cluster '()])))
 
 (defn -receive-ping-req-timeout*
-  [cluster target]
-  [cluster '()])
+  [cluster target from]
+  (let [pinged (:pinged cluster)]
+    (if (and (some #{target} pinged)
+             (some #{{:to from
+                      :target target}}
+                   (:ping-reqed cluster)))
+      (let [cluster (update-in cluster [:ping-reqed] disj {:to from
+                                                           :target target})]
+        (if (->> cluster
+                 :ping-reqed
+                 (map :target)
+                 (filter #(= % target))
+                 count
+                 (= 0))
+          [(-> cluster
+               (update-in [:suspected] conj target)
+               (update-in [:pinged] disj target))
+           '()]
+          [cluster '()]))
+      [cluster '()])))
 
 (defmethod receive-message*
   :timeout
-  [cluster {:keys [target timeout-type]}]
+  [cluster {:keys [target timeout-type from]}]
   (condp = timeout-type
     :ping (-receive-ping-timeout* cluster target)
-    :ping-req (-receive-ping-req-timeout* cluster target)))
+    :ping-req (-receive-ping-req-timeout* cluster target from)))
 
 (defmethod receive-message*
   :ack

@@ -253,7 +253,9 @@
                       (testing "THEN a messages should have been sent out to the cluster that that member has been marked as suspicious"
                         (some #(= % {:type :suspicious
                                      :target target})
-                              (map :msg new-msgs))))))))))))))
+                              (map :msg new-msgs)))
+                      (testing "THEN the target should not be in the pinged collection anymore"
+                        (is (false? (contains? (:pinged cluster) target)))))))))))))))
 
 (deftest members-joining-test
   (testing "GIVEN a cluster with 2 members"
