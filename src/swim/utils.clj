@@ -1,4 +1,5 @@
-(ns swim.utils)
+(ns swim.utils
+  (:require (clojure pprint)))
 
 (defn debug [x]
   (print "DEBUG: ")
